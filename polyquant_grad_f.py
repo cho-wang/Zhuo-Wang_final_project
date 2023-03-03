@@ -1,16 +1,20 @@
 import numpy as np
+import astra
+
 # This function calculates the gradient, objective function unless using
 # OS, and the scatter if calculated on the fly.
 
-def polyquant_grad(specData, A, At, I0, rho, y, ind, scatFun, subSet, w):
+def polyquant_grad(specData, A, vol_geom, proj_geom, proj_id, At, I0, rho, y, scatFun, subSet, w):
     projSet = [[0 for j in range(2)] for i in range(len(specData['hinge']) - 1)]
     mask = [[] for i in range(len(specData['hinge']) - 1)]
     projSet[0][1] = 0
     for k in range(len(specData['hinge']) - 1):
         mask[k] = np.where((rho > specData['hinge'][k]) & (rho < specData['hinge'][k + 1]), 1, 0)
-        projSet[k][0] = A[mask[k], rho][ind]
+        projSet[k][0] = A(np.dot(mask[k], rho), proj_id)   # check if you need to use np.dot or no.multuiply?
+        # projSet[k][0] = astra.create_sino(np.dot(mask[k], rho), proj_id)
         if k > 1:
-            projSet[k][1] = A[mask[k]][ind]
+            projSet[k][1] = A(mask[k], proj_id)
+            # projSet[k][1] = astra.create_sino(mask[k], proj_id)
 
     specProb = specData['spectrum'] / np.sum(specData['spectrum'])
 
@@ -40,7 +44,11 @@ def polyquant_grad(specData, A, At, I0, rho, y, ind, scatFun, subSet, w):
     out = np.zeros((rho.shape, rho.shape))
 
     for l in np.arange(1, len(specData['hinge']) - 1 + 1).reshape(-1):
-        out = out + np.multiply(mask[l], At(np.multiply(np.multiply(I0, hingeFac[l]), deriFac), ind))
+        sino_g = np.multiply(np.multiply(I0, hingeFac[l])
+                             
+        sinog_id = astra.data2d.create('-sino', proj_geom)
+                             
+        out = out + np.multiply(mask[l], At(sinog_id, vol_geom))
 
     strOut = {}
     strOut['grad'] = out
